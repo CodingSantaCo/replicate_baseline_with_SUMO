@@ -7,7 +7,8 @@
           maxSpeed="13.89" 
           accel="2.6" 
           decel="4.5" 
-          sigma="0.5" 
+          sigma="0.0"
+          tau="0.5"
           color="red"
           carFollowModel="Krauss"
           guiShape="passenger"/>
@@ -18,7 +19,8 @@
           maxSpeed="13.89" 
           accel="2.6" 
           decel="4.5" 
-          sigma="0.5" 
+          sigma="0.0" 
+          tau="0.5"
           color="blue"
           carFollowModel="Krauss"
           guiShape="passenger"/>
