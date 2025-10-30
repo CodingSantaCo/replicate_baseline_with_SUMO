@@ -269,63 +269,69 @@ def estimate_holding_vehicles(snap_df: pd.DataFrame, q_hat: float, p_hat: float,
                                green_duration: float) -> dict:
     """
     Estimate holding vehicles R and R_CV at EoR.
-    
+
     Following Appendix B - CVHV model.
     R = vehicles that should have been discharged but are still in the lane
-    
+
+    Definition: "Holding vehicles are vehicles that, based on their projected
+    trajectories using cruise speeds, should have been discharged by that instant
+    but remain held by the system."
+
+    Holding vehicles are those that entered before (EoR - tau_ff) and are still
+    in the lane at EoR.
+
     This implements CVHV-I sub-model (for ToI during effective red).
     """
-    # Find last stopped CV and its entry time
-    vid, L_k1, T_k1, N_tilde = find_last_stopped_cv(snap_df, hist_df, eor_time)
-    
-    # Count stopped CVs
-    iscv = is_cv(snap_df["type"], snap_df["id"])
-    stopped = snap_df["speed"] <= V_STOP
-    R_CV = int((iscv & stopped).sum())
-    
-    if vid is None or L_k1 is None:
-        # No stopped CV found - estimate from expected queue
-        # Expected queue at EoR
-        q_nc = q_hat * (1 - p_hat)
-        expected_queue = min(q_hat * RED, LANE_LEN / L_EFF)
-        R = int(expected_queue)
-        R_NC = max(0, R - R_CV)
-        return {'R': R, 'R_CV': R_CV, 'R_NC': R_NC, 'method': 'no_stopped_cv'}
-    
-    # Estimate holding vehicles based on geometry
-    # R1: Vehicles currently stopped (observable in queue)
-    stopped_all = snap_df[stopped]
-    R1 = len(stopped_all)
-    
-    # R2: NCs that arrived during red but are not yet in queue position
-    # These are vehicles that entered during [T_k1, EoR] but haven't reached stopping position
-    q_nc = q_hat * (1 - p_hat)
-    
-    # Time for a vehicle to travel from entrance to L_k1 at free-flow
+    # Free-flow travel time through the lane
     tau_ff = LANE_LEN / V_FREE
-    
-    # NCs that arrived after T_k1 and should have reached queue by EoR
-    if T_k1 is not None and T_k1 < eor_time:
-        arrival_window = eor_time - T_k1
-        # But only count those that had time to reach the queue
-        effective_window = max(0.0, arrival_window - tau_ff)
-        R2 = q_nc * effective_window
-    else:
-        R2 = 0.0
-    
-    # Total holding vehicles
-    R = int(R1 + R2)
-    R_NC = max(0, R - R_CV)
-    
+
+    # Cutoff time: vehicles that entered before this should have exited by EoR
+    cutoff_time = eor_time - tau_ff
+
+    # For each vehicle in snapshot, find when it first entered the lane
+    holding_vehicles = []
+    holding_cvs = []
+
+    iscv = is_cv(snap_df["type"], snap_df["id"])
+
+    for idx, row in snap_df.iterrows():
+        vid = row["id"]
+        is_cv_vehicle = iscv.loc[idx]
+
+        # Find first appearance of this vehicle in history
+        veh_hist = hist_df[hist_df["id"] == vid].sort_values("time")
+
+        if len(veh_hist) > 0:
+            entry_time = float(veh_hist["time"].min())
+
+            # Check if this vehicle should have been discharged by EoR
+            if entry_time < cutoff_time:
+                holding_vehicles.append(vid)
+                if is_cv_vehicle:
+                    holding_cvs.append(vid)
+
+    # Count holding vehicles
+    R = len(holding_vehicles)
+    R_CV = len(holding_cvs)
+    R_NC = R - R_CV
+
+    # For debugging: also compute the old (incorrect) method
+    stopped = snap_df["speed"] <= V_STOP
+    R1_old = int(stopped.sum())  # All stopped vehicles (old incorrect method)
+
+    # Find last stopped CV for additional metrics
+    vid, L_k1, T_k1, N_tilde = find_last_stopped_cv(snap_df, hist_df, eor_time)
+
     return {
         'R': R,
         'R_CV': R_CV,
         'R_NC': R_NC,
-        'R1': R1,
-        'R2': R2,
+        'cutoff_time': cutoff_time,
+        'tau_ff': tau_ff,
         'T_k1': T_k1,
         'L_k1': L_k1,
-        'method': 'cvhv'
+        'R1_old_method': R1_old,  # For comparison
+        'method': 'entry_time_based'
     }
 
 def main():
@@ -375,13 +381,19 @@ def main():
             continue
         
         print(f"  Vehicles in snapshot: {len(snap)}")
-        
-        # Get history for backtracking
-        hist = df_lane[(df_lane["time"] >= t - LOOKBACK) & (df_lane["time"] <= t)].copy()
-        
+
+        # Get history for backtracking T_k1 (short window)
+        hist_short = df_lane[(df_lane["time"] >= t - LOOKBACK) & (df_lane["time"] <= t)].copy()
+
+        # Get full history for tracking entry times (needed for R calculation)
+        # Use max(tau_ff, LOOKBACK) to ensure we capture all potential holding vehicles
+        tau_ff = LANE_LEN / V_FREE
+        history_window = max(tau_ff + 10.0, LOOKBACK)  # Add 10s buffer
+        hist = df_lane[(df_lane["time"] >= t - history_window) & (df_lane["time"] <= t)].copy()
+
         # Count CVs and observable vehicles in queue
         n_cvs = count_cvs_in_queue(snap)
-        _, _, _, N_tilde = find_last_stopped_cv(snap, hist, t)
+        _, _, _, N_tilde = find_last_stopped_cv(snap, hist_short, t)
         
         print(f"  CVs in queue (n): {n_cvs}")
         print(f"  Observable vehicles before last CV (Ñ): {N_tilde}")
@@ -407,7 +419,10 @@ def main():
         print(f"  → Holding vehicles (R): {holding['R']}")
         print(f"  → Holding CVs (R_CV): {holding['R_CV']}")
         print(f"  → Holding NCs (R_NC): {holding['R_NC']}")
+        print(f"  → Cutoff time: {holding.get('cutoff_time', 'N/A'):.1f}s")
         print(f"  → Method: {holding['method']}")
+        if 'R1_old_method' in holding:
+            print(f"  → (Old method would give R1={holding['R1_old_method']})")
         
         results.append({
             'EoR_s': float(t),
@@ -423,6 +438,9 @@ def main():
             'window_cycles': min(len(cycle_observations), OMEGA+1),
             'T_k1': holding.get('T_k1', None),
             'L_k1': holding.get('L_k1', None),
+            'cutoff_time': holding.get('cutoff_time', None),
+            'tau_ff': holding.get('tau_ff', None),
+            'R1_old_method': holding.get('R1_old_method', None),
             'holding_method': holding.get('method', 'unknown')
         })
     
