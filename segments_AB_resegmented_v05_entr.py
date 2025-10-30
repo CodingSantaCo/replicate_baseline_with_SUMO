@@ -13,6 +13,7 @@ ENTR_POS  = 0.0
 TOL_T     = 0.5
 
 STOP_TH   = 0.5   # < 0.5 m/s => stopped
+EOR_FRONT_ZONE = 100.0  # m from stop bar - vehicles here at EoR are "about to move"
 
 def load_fcd(path: Path) -> pd.DataFrame:
     rows, cur_t = [], 0.0
@@ -66,7 +67,18 @@ def main():
         anchors = [("stopline", STOP_POS, 0.0, True)]
         for _, r in cvs.iterrows():
             v = float(r["speed"])
-            anchors.append((str(r["id"]), float(r["pos"]), v, v < STOP_TH))
+            pos = float(r["pos"])
+
+            # EoR edge case: vehicles near stop bar with speed=0 are "about to move"
+            # Treat them as moving to avoid misclassification
+            dist_from_stop = STOP_POS - pos
+            if v < STOP_TH and dist_from_stop <= EOR_FRONT_ZONE:
+                # At EoR, front vehicles with v=0 are transitioning, treat as moving
+                is_stopped = False
+            else:
+                is_stopped = (v < STOP_TH)
+
+            anchors.append((str(r["id"]), pos, v, is_stopped))
         anchors.append(("entrance", ENTR_POS, 0.0, False))
 
         # build segments between consecutive anchors

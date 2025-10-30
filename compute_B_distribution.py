@@ -22,9 +22,9 @@ L_E = 6.44  # average effective vehicle length (m)
 DELTA_T = 2.04  # minimum safe time headway (s) - from paper Section 5.1
 LANE_LEN = 1000.0  # stopline coordinate (m)
 
-def round_half_up(x: float) -> int:
-    """Round to nearest, halves up (0.5 -> 1), matching the paper's ⌊·⌉ symbol."""
-    return int(floor(x + 0.5))
+def round_nearest(x: float) -> int:
+    """Round to nearest integer, matching the paper's ⌊·⌉ symbol."""
+    return int(round(x))
 
 def compute_Q_tilde_B_i(Li, Li_plus_1, Vi, Vi_plus_1, is_boundary):
     """
@@ -54,10 +54,10 @@ def compute_Q_tilde_B_i(Li, Li_plus_1, Vi, Vi_plus_1, is_boundary):
 
     if is_boundary:
         # i=0 or i=m: can insert at boundary
-        Q_tilde = round_half_up(k + 1)
+        Q_tilde = round_nearest(k + 1)
     else:
         # i ∈ (0,m): enclosed by two CVs
-        Q_tilde = round_half_up(k) - 1
+        Q_tilde = round_nearest(k) - 1
 
     return max(0, Q_tilde)
 
@@ -174,7 +174,7 @@ def main():
         for i, Q_tilde in enumerate(Q_tilde_values):
             if sum_Q_tilde > 0:
                 # Scaling factor ρ = Q_remaining / sum(Q̃_B_i)
-                Q_B_i = round_half_up(Q_remaining * Q_tilde / sum_Q_tilde) + excess
+                Q_B_i = round_nearest(Q_remaining * Q_tilde / sum_Q_tilde) + excess
             else:
                 Q_B_i = excess
 
