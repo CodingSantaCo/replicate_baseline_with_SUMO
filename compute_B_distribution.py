@@ -53,11 +53,11 @@ def compute_Q_tilde_B_i(Li, Li_plus_1, Vi, Vi_plus_1, is_boundary):
     k = numerator / denominator
 
     if is_boundary:
-        # i=0 or i=m: can insert at boundary
+        # i=0 or i=m: can insert at boundary (Eq. D14)
         Q_tilde = round_nearest(k + 1)
     else:
-        # i ∈ (0,m): enclosed by two CVs
-        Q_tilde = round_nearest(k) - 1
+        # i ∈ (0,m): enclosed by two CVs (Eq. D15)
+        Q_tilde = round_nearest(k)
 
     return max(0, Q_tilde)
 
