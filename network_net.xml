@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2025-10-28 16:11:59 by Eclipse SUMO netconvert Version 1.20.0
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="network_nod.xml"/>
+        <edge-files value="network_edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="network_net.xml"/>
+    </output>
+
+</configuration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,1000.00" convBoundary="0.00,0.00,0.00,1100.00" origBoundary="0.00,-1000.00,0.00,100.00" projParameter="!"/>
+
+    <edge id=":intersection2_0" function="internal">
+        <lane id=":intersection2_0_0" index="0" speed="13.89" length="0.10" shape="1.60,1000.00 1.60,1000.00"/>
+    </edge>
+
+    <edge id="intertonorth" from="intersection2" to="north" priority="-1" length="100.00">
+        <lane id="intertonorth_0" index="0" speed="13.89" length="100.00" shape="1.60,1000.00 1.60,1100.00"/>
+    </edge>
+    <edge id="lane7" from="south" to="intersection2" priority="-1" length="1000.00">
+        <lane id="lane7_0" index="0" speed="13.89" length="1000.00" shape="1.60,0.00 1.60,1000.00"/>
+    </edge>
+
+    <tlLogic id="intersection2" type="static" programID="0" offset="0">
+        <phase duration="30" state="r"/>
+        <phase duration="22" state="g"/>
+        <phase duration="3" state="y"/>
+        <phase duration="5" state="r"/>
+    </tlLogic>
+
+    <junction id="intersection2" type="traffic_light" x="0.00" y="1000.00" incLanes="lane7_0" intLanes=":intersection2_0_0" shape="0.00,1000.00 3.20,1000.00 0.00,1000.00">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="north" type="dead_end" x="0.00" y="1100.00" incLanes="intertonorth_0" intLanes="" shape="3.20,1100.00 0.00,1100.00"/>
+    <junction id="south" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="0.00,0.00 3.20,0.00"/>
+
+    <connection from="lane7" to="intertonorth" fromLane="0" toLane="0" via=":intersection2_0_0" tl="intersection2" linkIndex="0" dir="s" state="O"/>
+
+    <connection from=":intersection2_0" to="intertonorth" fromLane="0" toLane="0" dir="s" state="M"/>
+
+</net>

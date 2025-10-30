@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <!-- 输入文件 -->
+    <input>
+        <net-file value="network_net.xml"/>
+        <route-files value="routes_rou.xml"/>
+    </input>
+
+    <!-- 仿真时间设置 -->
+    <time>
+        <begin value="0"/>
+        <end value="3600"/>
+        <step-length value="0.1"/>
+    </time>
+
+    <!-- 输出文件 -->
+    <output>
+        <!-- 车辆轨迹输出 -->
+        <fcd-output value="fcd_output.xml"/>
+        <fcd-output.geo value="false"/>
+        <fcd-output.signals value="true"/>
+    </output>
+
+    <!-- 仿真参数 -->
+    <processing>
+        <!-- 启用碰撞检测 -->
+        <collision.check-junctions value="true"/>
+        <collision.action value="warn"/>
+        
+        <!-- 路由设置 -->
+        <routing-algorithm value="dijkstra"/>
+        
+        <!-- 随机种子 -->
+        <seed value="42"/>
+        
+        <!-- 车辆插入设置 -->
+        <max-depart-delay value="900"/>
+        <ignore-route-errors value="true"/>
+    </processing>
+
+    <!-- 报告设置 -->
+    <report>
+        <verbose value="true"/>
+        <no-step-log value="false"/>
+        <duration-log.statistics value="true"/>
+        <no-warnings value="false"/>
+    </report>
+</configuration>
