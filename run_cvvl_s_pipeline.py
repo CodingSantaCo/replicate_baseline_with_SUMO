@@ -34,20 +34,30 @@ def combine_estimates():
     all_positions = []
 
     if a_pos_file.exists():
-        a_pos = pd.read_csv(a_pos_file)
-        if not a_pos.empty:
-            a_pos["segment_type"] = "A"
-            a_pos = a_pos.rename(columns={"seg_idx_A": "seg_idx"})
-            all_positions.append(a_pos)
-            print(f"  Type A: {len(a_pos)} NC positions")
+        try:
+            a_pos = pd.read_csv(a_pos_file)
+            if not a_pos.empty:
+                a_pos["segment_type"] = "A"
+                a_pos = a_pos.rename(columns={"seg_idx_A": "seg_idx"})
+                all_positions.append(a_pos)
+                print(f"  Type A: {len(a_pos)} NC positions")
+            else:
+                print(f"  Type A: 0 NC positions (empty file)")
+        except pd.errors.EmptyDataError:
+            print(f"  Type A: 0 NC positions (no data in file)")
 
     if b_pos_file.exists():
-        b_pos = pd.read_csv(b_pos_file)
-        if not b_pos.empty:
-            b_pos["segment_type"] = "B"
-            b_pos = b_pos.rename(columns={"seg_idx_B": "seg_idx"})
-            all_positions.append(b_pos)
-            print(f"  Type B: {len(b_pos)} NC positions")
+        try:
+            b_pos = pd.read_csv(b_pos_file)
+            if not b_pos.empty:
+                b_pos["segment_type"] = "B"
+                b_pos = b_pos.rename(columns={"seg_idx_B": "seg_idx"})
+                all_positions.append(b_pos)
+                print(f"  Type B: {len(b_pos)} NC positions")
+            else:
+                print(f"  Type B: 0 NC positions (empty file)")
+        except pd.errors.EmptyDataError:
+            print(f"  Type B: 0 NC positions (no data in file)")
 
     if all_positions:
         combined = pd.concat(all_positions, ignore_index=True)
