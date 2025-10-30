@@ -17,6 +17,11 @@ LANE_ID = "lane7_0"
 TOLERANCE = 10.0  # meters - threshold for matching (from paper Section 5.2)
 TIME_TOL = 0.5    # seconds - snapshot tolerance
 
+# Warmup period settings
+CYCLE_LENGTH = 60.0  # seconds
+WARMUP_CYCLES = 5     # First 5 cycles excluded from evaluation
+WARMUP_TIME = WARMUP_CYCLES * CYCLE_LENGTH  # 300s
+
 def load_fcd(path: Path) -> pd.DataFrame:
     """Load SUMO FCD output."""
     rows, cur_t = [], 0.0
@@ -164,11 +169,16 @@ def main():
     estimates = pd.read_csv(est_path)
     print(f"  Loaded {len(estimates)} NC position estimates")
 
-    # Evaluate for each EoR time
+    # Evaluate for each EoR time (excluding warmup period)
     results = []
-    eor_times = sorted(estimates["EoR_s"].unique())
+    all_eor_times = sorted(estimates["EoR_s"].unique())
+    eor_times = [t for t in all_eor_times if t >= WARMUP_TIME]
 
-    print(f"\nEvaluating at {len(eor_times)} time points...")
+    warmup_cycles_excluded = len([t for t in all_eor_times if t < WARMUP_TIME])
+
+    print(f"\nWarmup Period: {WARMUP_CYCLES} cycles ({WARMUP_TIME:.0f}s)")
+    print(f"  Excluding {warmup_cycles_excluded} warmup cycles from evaluation")
+    print(f"\nEvaluating at {len(eor_times)} time points (t >= {WARMUP_TIME:.0f}s)...")
     print(f"Tolerance: {TOLERANCE} meters\n")
 
     for t in eor_times:
@@ -219,6 +229,8 @@ def main():
     print("="*60)
     print("EVALUATION RESULTS - BASELINE CASE")
     print("="*60)
+    print(f"\nEvaluation Period: Cycles {WARMUP_CYCLES+1}-60 ({WARMUP_TIME:.0f}s-3600s)")
+    print(f"  Evaluated {len(eor_times)} cycles (warmup excluded)")
     print(f"\nOverall Performance:")
     print(f"  Precision: {overall_precision:.3f} ({overall_precision*100:.1f}%)")
     print(f"  Recall:    {overall_recall:.3f} ({overall_recall*100:.1f}%)")
