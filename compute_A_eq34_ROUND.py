@@ -12,9 +12,9 @@ STOP_POS = 1000.0   # stopline coordinate l
 L_E      = 6.44      # average effective vehicle length
 STOP_TH  = 0.5      # "stopped" threshold (only for sanity diagnostics)
 
-def round_half_up(x: float) -> int:
-    """Round to nearest, halves up (0.5 -> 1), matching the paper's ⌊·⌉ symbol."""
-    return int(floor(x + 0.5))
+def round_nearest(x: float) -> int:
+    """Round to nearest integer, matching the paper's ⌊·⌉ symbol."""
+    return int(round(x))
 
 def main():
     p = Path(IN_FILE)
@@ -66,16 +66,16 @@ def main():
             up_a = seg.get("up_anchor",""); down_a = seg.get("down_anchor","")
             up_v = float(seg.get("up_speed",0.0)); down_v = float(seg.get("down_speed",0.0))
 
-            # Eq.(D1)/(D2) — ROUND (half up)
+            # Eq.(D1)/(D2) — ROUND
             if i == 0:
                 # i=0: Q = ⌊(l - L1)/le⌉
                 span = (STOP_POS - up_m)
-                Q = round_half_up(max(0.0, span / L_E))
+                Q = round_nearest(max(0.0, span / L_E))
                 formula = "i=0: round((l - L1)/le)"
             else:
                 # i>0: Q = ⌊(Li - le - Li+1)/le⌉
                 span = (down_m - L_E - up_m)
-                Q = round_half_up(max(0.0, span / L_E))
+                Q = round_nearest(max(0.0, span / L_E))
                 formula = "i>0: round((Li - le - Li+1)/le)"
 
             # emit positions only if Q>0 (Eq.(D3)(D4))

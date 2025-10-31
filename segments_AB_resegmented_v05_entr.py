@@ -40,6 +40,16 @@ def nearest_snapshot(df: pd.DataFrame, t: float, tol: float) -> pd.DataFrame:
     snap = snap.sort_values(["id","dt"]).drop_duplicates("id", keep="first")
     return snap
 
+def is_cv(type_series: pd.Series, id_series: pd.Series) -> pd.Series:
+    """Identify connected vehicles (CVs) from type and ID fields."""
+    t = type_series.fillna("").astype(str).str.upper()
+    iscv = (t == "CV")
+    undecided = ~((t=="CV") | (t=="NC"))
+    if undecided.any():
+        ids = id_series[undecided].astype(str).str.lower()
+        iscv.loc[undecided] = ids.str.contains("cv") | ids.str.contains("f_cv")
+    return iscv.astype(bool)
+
 def main():
     base = Path(".")
     if not (base/"fcd_output.xml").exists() or not (base/"holding_EoR_fixed.csv").exists():
@@ -59,14 +69,16 @@ def main():
             continue
 
         # CVs in downstream->upstream order
-        is_cv = snap["type"].str.contains("CV", case=False, na=False) | snap["id"].astype(str).str.startswith("CV")
-        cvs = snap[is_cv].copy().sort_values("pos", ascending=False).reset_index(drop=True)
+        is_cv_mask = is_cv(snap["type"], snap["id"])
+        cvs = snap[is_cv_mask].copy().sort_values("pos", ascending=False).reset_index(drop=True)
 
         # anchors: stopline (stopped), CVs (stopped if v<0.5), entrance (treated as moving -> not stopped)
         anchors = [("stopline", STOP_POS, 0.0, True)]
         for _, r in cvs.iterrows():
             v = float(r["speed"])
-            anchors.append((str(r["id"]), float(r["pos"]), v, v < STOP_TH))
+            pos = float(r["pos"])
+            is_stopped = (v < STOP_TH)
+            anchors.append((str(r["id"]), pos, v, is_stopped))
         anchors.append(("entrance", ENTR_POS, 0.0, False))
 
         # build segments between consecutive anchors
